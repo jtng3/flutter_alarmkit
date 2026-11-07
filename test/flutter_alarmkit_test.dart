@@ -8,6 +8,7 @@ class _RecordingPlatform extends FlutterAlarmkitPlatform
     with MockPlatformInterfaceMixin {
   int? lastWeekdayMask;
   Map<String, dynamic>? lastMetadata;
+  bool? lastOpenAppOnStop;
 
   @override
   Future<String> scheduleOneShotAlarm({
@@ -17,8 +18,10 @@ class _RecordingPlatform extends FlutterAlarmkitPlatform
     String? soundPath,
     Map<String, dynamic>? uiConfig,
     Map<String, dynamic>? metadata,
+    bool openAppOnStop = false,
   }) async {
     lastMetadata = metadata;
+    lastOpenAppOnStop = openAppOnStop;
     return 'mock-id';
   }
 
@@ -46,11 +49,16 @@ class _RecordingPlatform extends FlutterAlarmkitPlatform
     String? soundPath,
     Map<String, dynamic>? uiConfig,
     Map<String, dynamic>? metadata,
+    bool openAppOnStop = false,
   }) async {
     lastWeekdayMask = weekdayMask;
     lastMetadata = metadata;
+    lastOpenAppOnStop = openAppOnStop;
     return 'mock-id';
   }
+
+  @override
+  Future<String?> consumeLastOpenedAlarmId() async => 'opened-id';
 }
 
 void main() {
@@ -94,6 +102,33 @@ void main() {
       );
 
       expect(platform.lastWeekdayMask, 1 | 64);
+    });
+  });
+
+  group('openAppOnStop', () {
+    test('defaults to false on one-shot and recurrent alarms', () async {
+      await plugin.scheduleOneShotAlarm(timestamp: 0);
+      expect(platform.lastOpenAppOnStop, isFalse);
+
+      await plugin.scheduleRecurrentAlarm(weekdays: {}, hour: 7, minute: 0);
+      expect(platform.lastOpenAppOnStop, isFalse);
+    });
+
+    test('forwards true to the platform layer', () async {
+      await plugin.scheduleOneShotAlarm(timestamp: 0, openAppOnStop: true);
+      expect(platform.lastOpenAppOnStop, isTrue);
+
+      await plugin.scheduleRecurrentAlarm(
+        weekdays: {},
+        hour: 7,
+        minute: 0,
+        openAppOnStop: true,
+      );
+      expect(platform.lastOpenAppOnStop, isTrue);
+    });
+
+    test('consumeLastOpenedAlarmId delegates to the platform', () async {
+      expect(await plugin.consumeLastOpenedAlarmId(), 'opened-id');
     });
   });
 

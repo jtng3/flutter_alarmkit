@@ -115,6 +115,13 @@ class FlutterAlarmkit {
   /// afconvert -f caff -d LEI16 input.mp3 output.caf
   /// ```
   ///
+  /// [openAppOnStop] attaches an app-registered stop intent so that tapping
+  /// the alarm's stop button also brings the app to the foreground. Call
+  /// [consumeLastOpenedAlarmId] on launch/resume to learn which alarm did it.
+  /// Requires the `OpenAlarmAppIntent` that `dart run flutter_alarmkit:setup`
+  /// writes into `AppDelegate.swift`; without it the call throws a
+  /// [PlatformException] with code `OPEN_APP_INTENT_NOT_REGISTERED`.
+  ///
   /// Returns a [Future<String>] that completes with the UUID of the scheduled
   /// alarm.
   ///
@@ -130,6 +137,7 @@ class FlutterAlarmkit {
     String? soundPath,
     AlarmUIConfig? uiConfig,
     AlarmMetadata? metadata,
+    bool openAppOnStop = false,
   }) {
     return FlutterAlarmkitPlatform.instance.scheduleOneShotAlarm(
       timestamp: timestamp,
@@ -138,6 +146,7 @@ class FlutterAlarmkit {
       soundPath: soundPath,
       uiConfig: uiConfig?.toMap(),
       metadata: (metadata == null || metadata.isEmpty) ? null : metadata.toMap(),
+      openAppOnStop: openAppOnStop,
     );
   }
 
@@ -245,6 +254,13 @@ class FlutterAlarmkit {
   /// afconvert -f caff -d LEI16 input.mp3 output.caf
   /// ```
   ///
+  /// [openAppOnStop] attaches an app-registered stop intent so that tapping
+  /// the alarm's stop button also brings the app to the foreground. Call
+  /// [consumeLastOpenedAlarmId] on launch/resume to learn which alarm did it.
+  /// Requires the `OpenAlarmAppIntent` that `dart run flutter_alarmkit:setup`
+  /// writes into `AppDelegate.swift`; without it the call throws a
+  /// [PlatformException] with code `OPEN_APP_INTENT_NOT_REGISTERED`.
+  ///
   /// Returns a [Future<String>] that completes with the UUID of the scheduled
   /// alarm.
   ///
@@ -262,6 +278,7 @@ class FlutterAlarmkit {
     String? soundPath,
     AlarmUIConfig? uiConfig,
     AlarmMetadata? metadata,
+    bool openAppOnStop = false,
   }) {
     return FlutterAlarmkitPlatform.instance.scheduleRecurrentAlarm(
       weekdayMask: Weekday.toBitmask(weekdays),
@@ -272,6 +289,7 @@ class FlutterAlarmkit {
       soundPath: soundPath,
       uiConfig: uiConfig?.toMap(),
       metadata: (metadata == null || metadata.isEmpty) ? null : metadata.toMap(),
+      openAppOnStop: openAppOnStop,
     );
   }
 
@@ -381,5 +399,18 @@ class FlutterAlarmkit {
   /// or channel errors also propagate.
   Future<bool> stopAlarm({required String alarmId}) {
     return FlutterAlarmkitPlatform.instance.stopAlarm(alarmId: alarmId);
+  }
+
+  /// Returns the id of the alarm whose stop button opened the app, or `null`
+  /// if the app was not opened that way since the last call. The value is
+  /// cleared on read, so call this once per launch or resume (for example from
+  /// `WidgetsBindingObserver.didChangeAppLifecycleState`).
+  ///
+  /// Only alarms scheduled with `openAppOnStop: true` ever set it.
+  ///
+  /// Throws a [PlatformException] if the platform version is not supported
+  /// (iOS < 26.0).
+  Future<String?> consumeLastOpenedAlarmId() {
+    return FlutterAlarmkitPlatform.instance.consumeLastOpenedAlarmId();
   }
 }

@@ -51,6 +51,7 @@ abstract class FlutterAlarmkitPlatform extends PlatformInterface {
     String? soundPath,
     Map<String, dynamic>? uiConfig,
     Map<String, dynamic>? metadata,
+    bool openAppOnStop = false,
   }) {
     throw UnimplementedError(
       'scheduleOneShotAlarm() has not been implemented.',
@@ -78,6 +79,7 @@ abstract class FlutterAlarmkitPlatform extends PlatformInterface {
     String? soundPath,
     Map<String, dynamic>? uiConfig,
     Map<String, dynamic>? metadata,
+    bool openAppOnStop = false,
   }) {
     throw UnimplementedError(
       'scheduleRecurrentAlarm() has not been implemented.',
@@ -114,5 +116,11 @@ abstract class FlutterAlarmkitPlatform extends PlatformInterface {
 
   Stream<AlarmUpdateEvent> alarmUpdates() {
     throw UnimplementedError('alarmUpdates() has not been implemented.');
+  }
+
+  Future<String?> consumeLastOpenedAlarmId() {
+    throw UnimplementedError(
+      'consumeLastOpenedAlarmId() has not been implemented.',
+    );
   }
 }

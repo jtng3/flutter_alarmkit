@@ -190,6 +190,33 @@ are keyed by the full asset path, so same-named files in different folders do
 not overwrite one another. If the bundled asset's content changes at the same
 path, the copy is refreshed the next time an alarm using it is scheduled.
 
+### Open the app when the alarm is stopped (experimental)
+
+Pass `openAppOnStop: true` to `scheduleOneShotAlarm` or `scheduleRecurrentAlarm`
+and the stop button also foregrounds your app. On launch or resume, ask which
+alarm did it:
+
+```dart
+final alarmId = await FlutterAlarmkit().scheduleOneShotAlarm(
+  timestamp: when.millisecondsSinceEpoch.toDouble(),
+  label: 'Wake up',
+  openAppOnStop: true,
+);
+
+// e.g. in WidgetsBindingObserver.didChangeAppLifecycleState(resumed):
+final opened = await FlutterAlarmkit().consumeLastOpenedAlarmId();
+if (opened != null) startMorningShow(opened);
+```
+
+This needs the `OpenAlarmAppIntent` that `dart run flutter_alarmkit:setup`
+appends to `ios/Runner/AppDelegate.swift`. Foreground App Intents run in the app
+process and must be compiled into the app target; a copy inside the plugin is
+not found by iOS. Without it the call throws `OPEN_APP_INTENT_NOT_REGISTERED`.
+
+Known unknowns, pending device testing: whether the system-drawn stop control on
+iOS 26.1+ honours a custom `stopIntent`, and whether swiping the alert away runs
+it. Keep a fallback (check `getAlarms()` on resume) if your flow depends on it.
+
 ### Schedule a Recurrent Alarm
 
 To schedule a recurrent alarm:

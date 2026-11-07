@@ -263,4 +263,41 @@ void main() {
     await platform.scheduleOneShotAlarm(timestamp: 0);
     expect(captured?.containsKey('metadata'), isFalse);
   });
+
+  test('openAppOnStop is sent only when true', () async {
+    final captured = <String, Map<dynamic, dynamic>?>{};
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      captured[call.method] = call.arguments as Map?;
+      return 'id-1';
+    });
+
+    await platform.scheduleOneShotAlarm(timestamp: 0);
+    expect(captured['scheduleOneShotAlarm']?.containsKey('openAppOnStop'), isFalse);
+
+    await platform.scheduleOneShotAlarm(timestamp: 0, openAppOnStop: true);
+    expect(captured['scheduleOneShotAlarm']?['openAppOnStop'], isTrue);
+
+    await platform.scheduleRecurrentAlarm(
+      weekdayMask: 0,
+      hour: 7,
+      minute: 0,
+      openAppOnStop: true,
+    );
+    expect(captured['scheduleRecurrentAlarm']?['openAppOnStop'], isTrue);
+  });
+
+  test('consumeLastOpenedAlarmId returns the native value or null', () async {
+    String? stored = 'abc';
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'consumeLastOpenedAlarmId') {
+        final value = stored;
+        stored = null;
+        return value;
+      }
+      return null;
+    });
+
+    expect(await platform.consumeLastOpenedAlarmId(), 'abc');
+    expect(await platform.consumeLastOpenedAlarmId(), isNull);
+  });
 }

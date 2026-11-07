@@ -3,7 +3,32 @@ import ActivityKit
 import CryptoKit
 import UIKit
 import AlarmKit
+import AppIntents
 import SwiftUI
+
+// MARK: - App-registered intents
+
+/// Intents that must run in the app process (`supportedModes = .foreground`)
+/// have to be declared in the app target: iOS resolves them against the app's
+/// own AppIntents registry, and a type that exists only in this plugin
+/// framework fails with "Could not find an intent with identifier …" (the
+/// reason the 0.4.0 open-app button was removed). The setup CLI therefore
+/// writes `OpenAlarmAppIntent` into `ios/Runner/AppDelegate.swift` and
+/// registers a factory here; the plugin only ever sees the factory.
+@available(iOS 26.0, *)
+@available(macCatalyst, unavailable)
+public enum FlutterAlarmkitIntents {
+  /// Builds the intent attached as `stopIntent` when an alarm is scheduled
+  /// with `openAppOnStop: true`. Assigned by the setup-generated AppDelegate
+  /// code at launch; `nil` means the app never ran setup.
+  public static var openAppIntentFactory:
+    ((_ alarmID: String) -> any LiveActivityIntent)?
+
+  /// `UserDefaults.standard` key the app-side intent writes the alarm id to
+  /// before the app comes to the foreground. Read and cleared by
+  /// `FlutterAlarmkit().consumeLastOpenedAlarmId()`.
+  public static let lastOpenedAlarmKey = "flutter_alarmkit.last_opened_alarm_id"
+}
 
 /// Public registration entry point, callable on any iOS version and when the
 /// plugin sources are type-checked for Mac Catalyst.
@@ -153,6 +178,13 @@ public class AlarmkitPluginImpl: NSObject, FlutterPlugin {
 
     case "stopAlarm":
       Task { await self.stopAlarm(call: call, result: result) }
+
+    case "consumeLastOpenedAlarmId":
+      let key = FlutterAlarmkitIntents.lastOpenedAlarmKey
+      let defaults = AlarmkitPluginImpl.defaults
+      let alarmId = defaults.string(forKey: key)
+      defaults.removeObject(forKey: key)
+      result(alarmId)
 
     default:
       result(FlutterMethodNotImplemented)
@@ -323,6 +355,29 @@ public class AlarmkitPluginImpl: NSObject, FlutterPlugin {
       secondaryButton: secondaryButton,
       secondaryButtonBehavior: secondaryButtonBehavior
     )
+  }
+
+  /// Resolve the `stopIntent` for the `openAppOnStop` flag. `nil` keeps
+  /// AlarmKit's default stop behaviour. When the flag is set but the app never
+  /// registered `FlutterAlarmkitIntents.openAppIntentFactory`, report it
+  /// explicitly instead of scheduling an alarm that silently cannot open the
+  /// app.
+  private func resolveStopIntent(
+    from args: [String: Any],
+    alarmID: UUID,
+    result: FlutterResult
+  ) -> (intent: (any LiveActivityIntent)?, ok: Bool) {
+    guard args["openAppOnStop"] as? Bool ?? false else { return (nil, true) }
+    guard let factory = FlutterAlarmkitIntents.openAppIntentFactory else {
+      result(FlutterError(
+        code: "OPEN_APP_INTENT_NOT_REGISTERED",
+        message: "openAppOnStop requires OpenAlarmAppIntent in the app target. "
+          + "Run `dart run flutter_alarmkit:setup` and rebuild.",
+        details: nil
+      ))
+      return (nil, false)
+    }
+    return (factory(alarmID.uuidString), true)
   }
 
   /// Persist the alarm's label and tint color in the app's defaults so they can
@@ -642,9 +697,12 @@ public class AlarmkitPluginImpl: NSObject, FlutterPlugin {
     )
 
     let soundPath = parseSoundPath(from: args)
+    let stopIntent = resolveStopIntent(from: args, alarmID: id, result: result)
+    guard stopIntent.ok else { return }
     let alarmConfiguration = AlarmManager.AlarmConfiguration<NeverMetadata>(
       schedule: .fixed(date),
       attributes: attributes,
+      stopIntent: stopIntent.intent,
       sound: resolveSoundAsset(soundPath)
     )
 
@@ -904,9 +962,12 @@ public class AlarmkitPluginImpl: NSObject, FlutterPlugin {
 
     // 6. Configure and schedule
     let soundPath = parseSoundPath(from: args)
+    let stopIntent = resolveStopIntent(from: args, alarmID: id, result: result)
+    guard stopIntent.ok else { return }
     let config = AlarmManager.AlarmConfiguration<NeverMetadata>(
       schedule: .relative(schedule),
       attributes: attributes,
+      stopIntent: stopIntent.intent,
       sound: resolveSoundAsset(soundPath)
     )
 

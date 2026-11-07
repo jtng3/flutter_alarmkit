@@ -65,10 +65,12 @@ class MethodChannelFlutterAlarmkit extends FlutterAlarmkitPlatform {
     String? soundPath,
     Map<String, dynamic>? uiConfig,
     Map<String, dynamic>? metadata,
+    bool openAppOnStop = false,
   }) async {
     try {
       final args = {
         'timestamp': timestamp,
+        if (openAppOnStop) 'openAppOnStop': true,
         if (label != null) 'label': label,
         if (tintColor != null) 'tintColor': tintColor,
         if (soundPath != null) 'soundPath': soundPath,
@@ -151,10 +153,12 @@ class MethodChannelFlutterAlarmkit extends FlutterAlarmkitPlatform {
     String? soundPath,
     Map<String, dynamic>? uiConfig,
     Map<String, dynamic>? metadata,
+    bool openAppOnStop = false,
   }) async {
     try {
       final args = <String, dynamic>{
         'weekdayMask': weekdayMask,
+        if (openAppOnStop) 'openAppOnStop': true,
         'hour': hour,
         'minute': minute,
         if (label != null) 'label': label,
@@ -225,6 +229,17 @@ class MethodChannelFlutterAlarmkit extends FlutterAlarmkitPlatform {
   @override
   Future<bool> stopAlarm({required String alarmId}) =>
       _controlAlarm('stopAlarm', alarmId);
+
+  @override
+  Future<String?> consumeLastOpenedAlarmId() async {
+    try {
+      return await methodChannel.invokeMethod<String>(
+        'consumeLastOpenedAlarmId',
+      );
+    } on PlatformException catch (e) {
+      _rethrowMapped(e);
+    }
+  }
 
   /// Error codes the native side raises when an alarm can't be controlled —
   /// it doesn't exist, or it isn't in a state the operation applies to.
