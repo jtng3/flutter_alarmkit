@@ -2,7 +2,7 @@
 * Add `openAppOnStop` to `scheduleOneShotAlarm` and `scheduleRecurrentAlarm`: the alarm's stop button also brings the app to the foreground, via an app-registered `stopIntent`. New `consumeLastOpenedAlarmId()` tells the app which alarm did it.
 * The intent (`OpenAlarmAppIntent`) is generated into `ios/Runner/AppDelegate.swift` by `dart run flutter_alarmkit:setup`, because foreground intents must live in the app target's AppIntents registry (the reason the 0.4.0 open-app button never worked and was removed in #12). The plugin exposes `FlutterAlarmkitIntents.openAppIntentFactory` for the app to register it. `setup --doctor` checks for it.
 * Scheduling with `openAppOnStop: true` before setup has run fails with `OPEN_APP_INTENT_NOT_REGISTERED` instead of silently doing nothing.
-* Not yet verified on a device: whether the system-drawn stop control on iOS 26.1+ runs a custom `stopIntent`, and whether swipe-to-dismiss does. Treat as experimental until then.
+* Device-verified on iPhone 16 Pro / iOS 26.7.1: the system-drawn stop control runs the custom `stopIntent` and the app comes to the foreground. The system stops and removes the alarm before the intent runs, so the generated intent does not call `stop` itself. Physical button presses also dismiss the alarm and run the intent. Swipe-to-dismiss while unlocked is reported by others not to run `stopIntent` (Apple Developer Forums thread 815064); keep an app-side fallback.
 
 ## 0.5.0
 * **Breaking (setup):** remove the App Group requirement, which failed code signing for every team but one (#21). After upgrading, quit Xcode and re-run `dart run flutter_alarmkit:setup`: it updates the widget template and removes `group.flutter-alarmkit` from your entitlements.

@@ -213,9 +213,10 @@ appends to `ios/Runner/AppDelegate.swift`. Foreground App Intents run in the app
 process and must be compiled into the app target; a copy inside the plugin is
 not found by iOS. Without it the call throws `OPEN_APP_INTENT_NOT_REGISTERED`.
 
-Known unknowns, pending device testing: whether the system-drawn stop control on
-iOS 26.1+ honours a custom `stopIntent`, and whether swiping the alert away runs
-it. Keep a fallback (check `getAlarms()` on resume) if your flow depends on it.
+Verified on iOS 26.7.1: the system-drawn stop control runs the intent, and so
+does any physical button press that dismisses the alarm. Swiping the alert away
+while the phone is unlocked is reported not to run `stopIntent`, so keep a
+fallback (check `getAlarms()` on resume) if your flow depends on it.
 
 ### Schedule a Recurrent Alarm
 

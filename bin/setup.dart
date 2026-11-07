@@ -369,10 +369,11 @@ struct OpenAlarmAppIntent: LiveActivityIntent {
   init(alarmID: String) { self.alarmID = alarmID }
 
   func perform() async throws -> some IntentResult {
+    // The system stops and removes the alarm before running this intent
+    // (observed on iOS 26.7.1: alarmUpdates reports alerting -> removed, then
+    // the intent runs; AlarmManager.stop here throws Code=0). So only record
+    // which alarm opened the app and let the app foreground.
     UserDefaults.standard.set(alarmID, forKey: FlutterAlarmkitIntents.lastOpenedAlarmKey)
-    if let id = UUID(uuidString: alarmID) {
-      try? AlarmManager.shared.stop(id: id)
-    }
     return .result()
   }
 }
